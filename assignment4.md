@@ -1,28 +1,26 @@
 Statistical assignment 4
 ================
-\[add your name here\]
-\[add date here\]
+Amy Wonnacott
+26/02/2020
 
-In this assignment you will need to reproduce 5 ggplot graphs. I supply graphs as images; you need to write the ggplot2 code to reproduce them and knit and submit a Markdown document with the reproduced graphs (as well as your .Rmd file).
+In this assignment you will need to reproduce 5 ggplot graphs. I supply
+graphs as images; you need to write the ggplot2 code to reproduce them
+and knit and submit a Markdown document with the reproduced graphs (as
+well as your .Rmd file).
 
-First we will need to open and recode the data. I supply the code for this; you only need to change the file paths.
+First we will need to open and recode the data. I supply the code for
+this; you only need to change the file paths.
 
     ```r
     library(tidyverse)
-    Data8 <- read_tsv("C:\\Users\\ab789\\datan3_2019\\data\\UKDA-6614-tab\\tab\\ukhls_w8\\h_indresp.tab")
-
+    Data8 <- read_tsv("C:/Users/User/Documents/GitHub/dataan3/UKDA-6614-tab/tab/ukhls_w8/h_indresp.tab")
     Data8 <- Data8 %>%
         select(pidp, h_age_dv, h_payn_dv, h_gor_dv)
-
-    Stable <- read_tsv("C:\\Users\\ab789\\datan3_2019\\data\\UKDA-6614-tab\\tab\\ukhls_wx\\xwavedat.tab")
-
+    Stable <- read_tsv("C:/Users/User/Documents/GitHub/dataan3/UKDA-6614-tab/tab/ukhls_wx/xwavedat.tab")
     Stable <- Stable %>%
         select(pidp, sex_dv, ukborn, plbornc)
-
     Data <- Data8 %>% left_join(Stable, "pidp")
-
     rm(Data8, Stable)
-
     Data <- Data %>%
         mutate(sex_dv = ifelse(sex_dv == 1, "male",
                            ifelse(sex_dv == 2, "female", NA))) %>%
@@ -55,24 +53,136 @@ First we will need to open and recode the data. I supply the code for this; you 
         )
     ```
 
-Reproduce the following graphs as close as you can. For each graph, write two sentences (not more!) describing its main message.
+Reproduce the following graphs as close as you can. For each graph,
+write two sentences (not more\!) describing its main message.
 
 1.  Univariate distribution (20 points).
 
-    ![](assignment4_myfiles/figure-markdown_github/unnamed-chunk-2-1.png)
+<!-- end list -->
 
-2.  Line chart (20 points). The lines show the non-parametric association between age and monthly earnings for men and women.
+``` r
+ggplot(Data,
+       aes(x = h_payn_dv)) +
+  geom_freqpoly() +
+  xlab("Net Monthly Income") +
+  ylab("Number of Respondants")+
+  ggtitle("Net Monthly Income Trend")
+```
 
-    ![](assignment4_myfiles/figure-markdown_github/unnamed-chunk-3-1.png)
+![](assignment4_files/figure-gfm/unnamed-chunk-2-1.png)<!-- --> The
+graph shows that most respondents have a monthly income of around
+£2,000. A significant number of people earn between £2,000- £4,000,
+however the number earning more than this is significantly fewer.
+
+2.  Line chart (20 points). The lines show the non-parametric
+    association between age and monthly earnings for men and women.
+    
+    ``` r
+    byAgeSex <- Data %>%
+      mutate(h_sex_dv = ifelse(sex_dv == 1, "male",
+                           ifelse(sex_dv == 2, "female", NA))) %>%
+      filter(!is.na(sex_dv)) %>%
+      group_by(h_age_dv, sex_dv) %>%
+      summarise(
+    medianIncome = median(h_payn_dv, na.rm = TRUE)
+      )
+    
+    byAgeSex%>%
+      ggplot(aes(x = h_age_dv, y = medianIncome, colour = sex_dv)) +
+        geom_line() +
+        geom_smooth() +
+        xlim(20,65) +
+        ylim(0,2500) +
+        xlab("Age") +
+        ylab("Median income")+
+        ggtitle("Age and Monthly Earnings \n for Men and Women")
+    ```
+    
+    ![](assignment4_files/figure-gfm/unnamed-chunk-3-1.png)<!-- --> This
+    line graph shows that men earn consistently more than women above
+    age 20, and the gap is greatest at around age 42, when men earn an
+    average of £750 more than women.
 
 3.  Faceted bar chart (20 points).
 
-    ![](assignment4_myfiles/figure-markdown_github/unnamed-chunk-4-1.png)
+Median net income by placeborn
+
+    ```r
+    byPlaceBorn <- Data %>%
+      select(sex_dv, placeBorn, h_payn_dv) %>%
+      filter(!is.na(sex_dv)) %>%
+      filter(!is.na(placeBorn))%>%
+      group_by(placeBorn, sex_dv) %>%
+      summarise(
+    medianIncome = median(h_payn_dv, na.rm = TRUE))
+    
+    byPlaceBorn %>%
+    ggplot(
+      aes(x = sex_dv, y = medianIncome, fill = sex_dv)) +
+      geom_bar(stat = "identity") + 
+      facet_wrap(~ placeBorn) +
+      xlab("Sex") +
+      ylab("Median Net Income")+
+      ggtitle("Median Net Income by Place Born for Men and Women")
+    ```
+    
+    ![](assignment4_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+
+These bar charts show that income is greatly affected by place born.
+People born in Bangladesh or Pakistan earn significantly less than those
+born in the UK or Ireland.There is always a difference in pay between
+men and women.
 
 4.  Heat map (20 points).
 
-    ![](assignment4_myfiles/figure-markdown_github/unnamed-chunk-5-1.png)
+Heatmap of income by age and sex.
+
+``` r
+heatmap<- Data%>%
+    filter(!is.na(h_gor_dv))%>%
+    filter(!is.na(h_age_dv))%>%
+  group_by(h_gor_dv, h_age_dv) %>%
+    summarise(medianIncome= median(h_payn_dv, na.rm=TRUE))
+
+heatmap %>%
+    ggplot(mapping= aes(x= h_gor_dv, y= h_age_dv))+
+  geom_tile(mapping= aes(fill = medianIncome))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  xlab("Region")+
+  ylab("Age")+
+  ylim(18,65)+
+  ggtitle("Heatmap of Average Income by Age and Region")
+```
+
+![](assignment4_files/figure-gfm/unnamed-chunk-5-1.png)<!-- --> This
+heat map shows that the median income in London is significantly higher
+than in other regions and starting at a younger age, followed by the
+South East. The regions with the consistent lowest median pay are Wales,
+the North East and Norther Ireland
 
 5.  Population pyramid (20 points).
 
-    ![](assignment4_myfiles/figure-markdown_github/unnamed-chunk-6-1.png)
+<!-- end list -->
+
+``` r
+Age <- Data %>%
+        group_by(h_age_dv) %>%
+        filter(!is.na(sex_dv)) %>%
+        count(sex_dv)
+        
+Age %>%
+    ggplot(
+    aes(x = h_age_dv, y = ifelse(sex_dv == "female", n, -n), fill = sex_dv)) +
+    geom_bar(stat = "identity", width =  .85) +
+    coord_flip() +
+    ylab("Number of Observations ") +
+    xlab("Age")+
+    ggtitle("Population Pyramid of Respondents")
+```
+
+![](assignment4_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+The population pyramid shows that there were more female respondents
+than male respondents across all ages, but particularly between the age
+of 50, where the number of female respondents exceeded 400, and the
+number of male respondents was around 350.
